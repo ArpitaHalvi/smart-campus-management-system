@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+/*
+  Theme: Registry Green.
+  A registrar's desk, not a SaaS landing page: cool bone-white paper, graphite
+  ink, and one deep ledger green that is used ONLY for actions and the current
+  selection. Everything else is neutral, so the green means "you can act here".
+
+  Variables declared in @theme become Tailwind utilities automatically
+  (bg-primary, text-ink, border-line, bg-night ...) and CSS variables
+  (var(--color-primary)). Change a colour here and the whole app follows.
+*/
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+
+  /* Action colour */
+  --color-primary: #1f5c4b;
+  --color-primary-dark: #174a3c;
+  --color-primary-soft: #5e9c87;
+  --color-primary-light: #a9cdbf;
+  --color-secondary: #3e4b45;
+
+  /* Surfaces: canvas < panel < inset */
+  --color-background: #f4f5f3;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #eceeea;
+
+  /* Dark surfaces (sidebar, brand panels) */
+  --color-night: #14201b;
+  --color-night-light: #1d2c26;
+  --color-night-muted: #3a4a43;
+
+  /* Text  ->  text-ink, text-ink-secondary, text-ink-muted */
+  --color-ink: #171a18;
+  --color-ink-secondary: #566059;
+  --color-ink-muted: #6f7772;
+
+  /* Borders  ->  border-line, border-line-strong */
+  --color-line: #dde0db;
+  --color-line-strong: #c4cac3;
+
+  /* Status */
+  --color-success: #3c8d5f;
+  --color-warning: #b7791f;
+  --color-danger: #b4433c;
+  --color-info: #2e6e8e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  accent-color: var(--color-primary);
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  background-color: var(--color-background);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Browser surfaces carry the theme too */
+::selection {
+  background: var(--color-primary);
+  color: #fff;
+}
+input,
+textarea {
+  caret-color: var(--color-primary);
+}
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 9999px;
+  border: 2px solid var(--color-background);
+}
+
+/* Numbers in tables and counts line up */
+table,
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loading placeholder */
+.skeleton {
+  background: var(--color-surface-secondary);
+  animation: skeleton 1.4s ease-in-out infinite alternate;
+}
+@keyframes skeleton {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* Appears only if something takes longer than a blink, so fast loads don't flash */
+.delayed-in {
+  animation: delayed-in 0.2s ease-out 0.15s both;
+}
+@keyframes delayed-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .delayed-in {
+    animation: none;
+  }
+}
+
+/* Mobile menu */
+.drawer-in {
+  animation: drawer-in 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.fade-in {
+  animation: fade-in 0.2s ease-out both;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-in,
+  .fade-in {
+    animation: none;
+  }
+}
+
+/* Student dashboard */
+.panel-in {
+  animation: panel-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* bars grow to their true length once seen */
+.bar-fill {
+  transition:
+    width 1.1s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* the chart line draws itself, then its labels appear */
+.chart-draw {
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.chart-fade {
+  transition: opacity 0.5s ease-out 0.2s;
+}
+.chart-fade-late {
+  transition-delay: 1.3s;
+}
+/* a quiet pulse on the class in progress */
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: live-ring 1.8s ease-out infinite;
+}
+@keyframes live-ring {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-in,
+  .live-dot::after {
+    animation: none;
+  }
+  .bar-fill,
+  .chart-draw,
+  .chart-fade {
+    transition: none;
+  }
+}

@@ -1,0 +1,28 @@
+.env*
+/node_modules
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+.pytest_cache/
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# React
+node_modules/
+dist/
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
