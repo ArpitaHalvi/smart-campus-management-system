@@ -218,3 +218,4 @@ PASSWORD_RESET_TIMEOUT = 60 * 60  # reset links stay valid for 1 hour (seconds)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
