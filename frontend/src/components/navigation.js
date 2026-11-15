@@ -1,10 +1,13 @@
 import {
   BookOpen,
   Building2,
+  Calendar,
+  FileText,
   GraduationCap,
   House,
   IdCard,
   LayoutGrid,
+  MessageSquare,
   UserRound,
   Users,
 } from "lucide-react";
@@ -24,11 +27,17 @@ export const NAV = {
     { to: "/faculty/students", label: "Students", icon: GraduationCap },
     { to: "/faculty/departments", label: "Departments", icon: Building2 },
     { to: "/faculty/academics", label: "Academics", icon: BookOpen },
+    { to: "/faculty/assignments", label: "Assignments", icon: FileText },
+    { to: "/faculty/notices", label: "Notices", icon: MessageSquare },
+    { to: "/faculty/events", label: "Events", icon: Calendar },
     { to: "/faculty/profile", label: "Profile", icon: UserRound },
   ],
   STUDENT: [
     { to: "/student", label: "Home", icon: House, end: true },
     { to: "/student/record", label: "My record", icon: IdCard },
+    { to: "/student/assignments", label: "Assignments", icon: FileText },
+    { to: "/student/notices", label: "Notices", icon: MessageSquare },
+    { to: "/student/events", label: "Events", icon: Calendar },
     { to: "/student/profile", label: "Profile", icon: UserRound },
   ],
 };

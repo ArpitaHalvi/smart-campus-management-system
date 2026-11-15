@@ -28,6 +28,25 @@ import CoursesTab from "./components/academics/CoursesTab";
 import SectionsTab from "./components/academics/SectionsTab";
 import ProfilePage from "./components/ProfilePage";
 
+// Assignment components
+import AssignmentsList from "./components/assignments/AssignmentsList";
+import AssignmentDetail from "./components/assignments/AssignmentDetail";
+import AssignmentForm from "./components/assignments/AssignmentForm";
+import SubmissionUpload from "./components/assignments/SubmissionUpload";
+import SubmissionsList from "./components/assignments/SubmissionsList";
+import EvaluationForm from "./components/assignments/EvaluationForm";
+
+// Notice components
+import NoticesList from "./components/notices/NoticesList";
+import NoticeDetail from "./components/notices/NoticeDetail";
+import NoticeForm from "./components/notices/NoticeForm";
+
+// Event components
+import EventsList from "./components/events/EventsList";
+import EventDetail from "./components/events/EventDetail";
+import EventForm from "./components/events/EventForm";
+import EventRegistrations from "./components/events/EventRegistrations";
+
 // Loader animation, then the intro screen (the home page)
 function Splash() {
   const [loading, setLoading] = useState(true);
@@ -100,6 +119,28 @@ function App() {
               <Route path="courses" element={<CoursesTab />} />
               <Route path="sections" element={<SectionsTab />} />
             </Route>
+
+            {/* Assignments */}
+            <Route path="assignments" element={<AssignmentsList />} />
+            <Route path="assignments/new" element={<AssignmentForm />} />
+            <Route path="assignments/:id" element={<AssignmentDetail />} />
+            <Route path="assignments/:id/edit" element={<AssignmentForm />} />
+            <Route path="assignments/:id/submissions" element={<SubmissionsList />} />
+            <Route path="assignments/:id/submissions/:submissionId/evaluate" element={<EvaluationForm />} />
+
+            {/* Notices */}
+            <Route path="notices" element={<NoticesList />} />
+            <Route path="notices/new" element={<NoticeForm />} />
+            <Route path="notices/:id" element={<NoticeDetail />} />
+            <Route path="notices/:id/edit" element={<NoticeForm />} />
+
+            {/* Events */}
+            <Route path="events" element={<EventsList />} />
+            <Route path="events/new" element={<EventForm />} />
+            <Route path="events/:id" element={<EventDetail />} />
+            <Route path="events/:id/edit" element={<EventForm />} />
+            <Route path="events/:id/registrations" element={<EventRegistrations />} />
+
             <Route path="profile" element={<ProfilePage />} />
           </Route>
           <Route
@@ -112,6 +153,20 @@ function App() {
           >
             <Route index element={<StudentDashboard />} />
             <Route path="record" element={<MyRecord />} />
+
+            {/* Assignments */}
+            <Route path="assignments" element={<AssignmentsList />} />
+            <Route path="assignments/:id" element={<AssignmentDetail />} />
+            <Route path="assignments/:id/submit" element={<SubmissionUpload />} />
+
+            {/* Notices */}
+            <Route path="notices" element={<NoticesList />} />
+            <Route path="notices/:id" element={<NoticeDetail />} />
+
+            {/* Events */}
+            <Route path="events" element={<EventsList />} />
+            <Route path="events/:id" element={<EventDetail />} />
+
             <Route path="profile" element={<ProfilePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -195,3 +195,22 @@ class ResetPasswordView(APIView):
         user.set_password(serializer.validated_data['new_password'])
         user.save(update_fields=['password'])  # also invalidates the used token
         return Response({'detail': 'Password updated. You can now sign in.'})
+
+
+class UserRoleView(APIView):
+    """
+    GET -> Returns the current user's role and other basic info.
+    Used by frontend to determine what UI to show.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            'id': request.user.id,
+            'username': request.user.username,
+            'email': request.user.email,
+            'role': request.user.role,
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+        })
