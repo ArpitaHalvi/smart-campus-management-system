@@ -27,6 +27,17 @@ import SemestersTab from "./components/academics/SemestersTab";
 import CoursesTab from "./components/academics/CoursesTab";
 import SectionsTab from "./components/academics/SectionsTab";
 import ProfilePage from "./components/ProfilePage";
+import FacultyList from "./components/faculty/FacultyList";
+import FacultyForm from "./components/faculty/FacultyForm";
+import FacultyProfile from "./components/faculty/FacultyProfile";
+import SubjectList from "./components/subjects/SubjectList";
+import SubjectForm from "./components/subjects/SubjectForm";
+import SubjectProfile from "./components/subjects/SubjectProfile";
+import AttendanceMarkingInterface from "./components/attendance/AttendanceMarkingInterface";
+import AttendanceSessionList from "./components/attendance/AttendanceSessionList";
+import AttendanceSessionDetail from "./components/attendance/AttendanceSessionDetail";
+import TimetableList from "./components/timetable/TimetableList";
+import TimetableForm from "./components/timetable/TimetableForm";
 
 // Loader animation, then the intro screen (the home page)
 function Splash() {
@@ -67,6 +78,18 @@ function App() {
             <Route path="students/new" element={<RegisterStudent />} />
             <Route path="students/import" element={<ImportStudents />} />
             <Route path="students/:id" element={<StudentProfile />} />
+            <Route path="faculty" element={<FacultyList />} />
+            <Route path="faculty/new" element={<FacultyForm />} />
+            <Route path="faculty/:id" element={<FacultyProfile />} />
+            <Route path="subjects" element={<SubjectList />} />
+            <Route path="subjects/new" element={<SubjectForm />} />
+            <Route path="subjects/:id" element={<SubjectProfile />} />
+            <Route path="attendance" element={<AttendanceSessionList />} />
+            <Route path="attendance/mark" element={<AttendanceMarkingInterface />} />
+            <Route path="attendance/:id" element={<AttendanceSessionDetail />} />
+            <Route path="timetable" element={<TimetableList />} />
+            <Route path="timetable/new" element={<TimetableForm />} />
+            <Route path="timetable/:id/edit" element={<TimetableForm />} />
             <Route path="departments" element={<DepartmentsList />} />
             <Route path="departments/new" element={<DepartmentForm />} />
             <Route path="departments/:id/edit" element={<DepartmentForm />} />
@@ -93,6 +116,10 @@ function App() {
             <Route path="students/import" element={<ImportStudents />} />
             <Route path="students/:id" element={<StudentProfile />} />
             <Route path="departments" element={<DepartmentsList />} />
+            <Route path="attendance" element={<AttendanceSessionList />} />
+            <Route path="attendance/mark" element={<AttendanceMarkingInterface />} />
+            <Route path="attendance/:id" element={<AttendanceSessionDetail />} />
+            <Route path="timetable" element={<TimetableList />} />
             <Route path="academics" element={<AcademicsPage />}>
               <Route index element={<Navigate to="years" replace />} />
               <Route path="years" element={<YearsTab />} />
@@ -112,6 +139,7 @@ function App() {
           >
             <Route index element={<StudentDashboard />} />
             <Route path="record" element={<MyRecord />} />
+            <Route path="timetable" element={<TimetableList />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,20 +1,94 @@
-
 from rest_framework import serializers
+from academics.models import Section
+from subjects.models import Subject, SubjectAllocation
+from faculty.models import Faculty
+from students.models import Student
 
 from .models import (
     AttendanceSession,
     AttendanceRecord,
     AttendanceCorrection
 )
-from subjects.models import SubjectAllocation
+
+
+class SubjectDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested subject details."""
+    class Meta:
+        model = Subject
+        fields = ['id', 'name', 'code']
+        read_only_fields = ['id', 'name', 'code']
+
+
+class SectionDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested section details."""
+    class Meta:
+        model = Section
+        fields = ['id', 'name']
+        read_only_fields = ['id', 'name']
+
+
+class FacultyDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested faculty details."""
+    user_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Faculty
+        fields = ['id', 'employee_id', 'user_details']
+        read_only_fields = ['id', 'employee_id', 'user_details']
+
+    def get_user_details(self, obj):
+        return {
+            'id': obj.user.id,
+            'first_name': obj.user.first_name,
+            'last_name': obj.user.last_name,
+        }
+
+
+class StudentDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested student details."""
+    user_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = ['id', 'enrollment_number', 'user_details']
+        read_only_fields = ['id', 'enrollment_number', 'user_details']
+
+    def get_user_details(self, obj):
+        return {
+            'id': obj.user.id,
+            'first_name': obj.user.first_name,
+            'last_name': obj.user.last_name,
+        }
+
+
+class AttendanceSessionDetailSerializer(serializers.ModelSerializer):
+    """Minimal session details for records."""
+    class Meta:
+        model = AttendanceSession
+        fields = ['id', 'attendance_date', 'session_number']
+        read_only_fields = ['id', 'attendance_date', 'session_number']
 
 
 class AttendanceSessionSerializer(serializers.ModelSerializer):
+    subject_details = SubjectDetailSerializer(source='subject', read_only=True)
+    section_details = SectionDetailSerializer(source='section', read_only=True)
+    faculty_details = FacultyDetailSerializer(source='faculty', read_only=True)
 
     class Meta:
         model = AttendanceSession
-        fields = '__all__'
-        read_only_fields = ['id', 'created_at']
+        fields = [
+            'id',
+            'subject',
+            'subject_details',
+            'section',
+            'section_details',
+            'faculty',
+            'faculty_details',
+            'attendance_date',
+            'session_number',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'subject_details', 'section_details', 'faculty_details', 'created_at']
 
     def validate(self, data):
         subject = data.get(
@@ -69,11 +143,22 @@ class AttendanceSessionSerializer(serializers.ModelSerializer):
 
 
 class AttendanceRecordSerializer(serializers.ModelSerializer):
+    student_details = StudentDetailSerializer(source='student', read_only=True)
+    session_details = AttendanceSessionDetailSerializer(source='session', read_only=True)
 
     class Meta:
         model = AttendanceRecord
-        fields = '__all__'
-        read_only_fields = ['id', 'marked_at']
+        fields = [
+            'id',
+            'session',
+            'session_details',
+            'student',
+            'student_details',
+            'status',
+            'remarks',
+            'marked_at',
+        ]
+        read_only_fields = ['id', 'student_details', 'session_details', 'marked_at']
 
     def validate(self, data):
         session = data.get(

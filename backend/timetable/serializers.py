@@ -1,14 +1,68 @@
 
 from rest_framework import serializers
+from academics.models import Section
+from subjects.models import Subject
+from faculty.models import Faculty
 from .models import Timetable
 
 
+class SectionDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested section details for Timetable."""
+    class Meta:
+        model = Section
+        fields = ['id', 'name', 'year']
+        read_only_fields = ['id', 'name', 'year']
+
+
+class SubjectDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested subject details for Timetable."""
+    class Meta:
+        model = Subject
+        fields = ['id', 'name', 'code']
+        read_only_fields = ['id', 'name', 'code']
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested user details for Timetable."""
+    class Meta:
+        from accounts.models import User
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'email']
+        read_only_fields = ['id', 'first_name', 'last_name', 'email']
+
+
+class FacultyDetailSerializer(serializers.ModelSerializer):
+    """Read-only nested faculty details for Timetable."""
+    user_details = UserDetailSerializer(source='user', read_only=True)
+    
+    class Meta:
+        model = Faculty
+        fields = ['id', 'user_details', 'employee_id']
+        read_only_fields = ['id', 'user_details', 'employee_id']
+
+
 class TimetableSerializer(serializers.ModelSerializer):
+    section_details = SectionDetailSerializer(source='section', read_only=True)
+    subject_details = SubjectDetailSerializer(source='subject', read_only=True)
+    faculty_details = FacultyDetailSerializer(source='faculty', read_only=True)
 
     class Meta:
         model = Timetable
-        fields = '__all__'
-        read_only_fields = ['id', 'created_at']
+        fields = [
+            'id',
+            'section',
+            'section_details',
+            'subject',
+            'subject_details',
+            'faculty',
+            'faculty_details',
+            'day',
+            'start_time',
+            'end_time',
+            'room',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'section_details', 'subject_details', 'faculty_details', 'created_at']
 
     def validate(self, data):
 
