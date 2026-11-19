@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import { AlertCircle, Plus, MessageSquare, Calendar, Pin, PinOff } from 'lucide-react';
+import { AlertCircle, Plus, MessageSquare, Calendar, Pin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
@@ -16,10 +16,31 @@ export default function NoticesList() {
   const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    fetchNotices();
+    const timer = setTimeout(() => {
+      if (search.length >= 3 || search.length === 0) {
+        fetchNotices();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search, category]);
+
+  useEffect(() => {
     getUserRole();
     fetchCategories();
-  }, [search, category]);
+    fetchNotices();
+  }, []);
+
+  // Refetch notices when component comes into focus (e.g., after returning from detail page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchNotices();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const getUserRole = async () => {
     try {
@@ -53,21 +74,6 @@ export default function NoticesList() {
       setCategories(response.data);
     } catch (err) {
       console.error('Failed to load categories');
-    }
-  };
-
-  const handlePin = async (noticeId, isPinned) => {
-    try {
-      if (isPinned) {
-        await api.post(`/notices/notices/${noticeId}/unpin/`);
-        toast.success('Notice unpinned');
-      } else {
-        await api.post(`/notices/notices/${noticeId}/pin/`);
-        toast.success('Notice pinned');
-      }
-      fetchNotices();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to update pin status');
     }
   };
 
@@ -114,24 +120,31 @@ export default function NoticesList() {
 
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
-        <input
-          type="text"
-          placeholder="Search notices..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+        <div className="flex-1 min-w-xs">
+          <input
+            type="text"
+            placeholder="Search notices... (minimum 3 characters)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {search.length > 0 && search.length < 3 && (
+            <p className="text-xs text-amber-600 mt-1">
+              Type at least {3 - search.length} more character{3 - search.length !== 1 ? 's' : ''} to search
+            </p>
+          )}
+        </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">All Categories</option>
-          {categories && categories.length > 0 && categories.map((cat, index) => {
-            const catValue = typeof cat === 'string' ? cat : (cat.name || cat.value || JSON.stringify(cat));
-            const catLabel = typeof cat === 'string' ? cat : (cat.name || cat.label || catValue);
+          {categories && categories.length > 0 && categories.map((cat) => {
+            const catValue = cat.value || cat;
+            const catLabel = cat.label || cat;
             return (
-              <option key={`${catValue}-${index}`} value={catValue}>
+              <option key={catValue} value={catValue}>
                 {catLabel}
               </option>
             );
@@ -174,24 +187,28 @@ export default function NoticesList() {
                 <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Calendar size={16} />
-                    <span>{formatDate(notice.created_at)}</span>
+                    <span>{formatDate(notice.published_at || notice.created_at)}</span>
                   </div>
                   {notice.category && (
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                      {notice.category}
+                      {notice.category_display || notice.category}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Status Badge */}
-              {!notice.is_published && (
-                <div className="absolute bottom-4 right-4">
+              {/* Status Badges */}
+              <div className="absolute bottom-4 right-4 flex gap-2 items-center">
+                {notice.is_published ? (
+                  <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                    Published
+                  </span>
+                ) : (
                   <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">
                     Draft
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </Link>
           ))}
         </div>

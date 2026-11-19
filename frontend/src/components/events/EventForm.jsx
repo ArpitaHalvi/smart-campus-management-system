@@ -14,12 +14,12 @@ export default function EventForm() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    location: '',
-    start_date: '',
-    end_date: '',
-    capacity: '',
-    department: '',
-    registration_enabled: true,
+    venue: '',
+    start_datetime: '',
+    end_datetime: '',
+    registration_deadline: '',
+    max_participants: '',
+    organizing_department: '',
   });
 
   useEffect(() => {
@@ -42,15 +42,23 @@ export default function EventForm() {
     try {
       setLoading(true);
       const response = await api.get(`/events/events/${id}/`);
+      
+      // Convert ISO datetime strings to datetime-local format (YYYY-MM-DDTHH:mm)
+      const toDatetimeLocal = (isoString) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toISOString().slice(0, 16);
+      };
+      
       setFormData({
         title: response.data.title,
         description: response.data.description,
-        location: response.data.location || '',
-        start_date: response.data.start_date,
-        end_date: response.data.end_date,
-        capacity: response.data.capacity || '',
-        department: response.data.department || '',
-        registration_enabled: response.data.registration_enabled,
+        venue: response.data.venue || '',
+        start_datetime: toDatetimeLocal(response.data.start_datetime),
+        end_datetime: toDatetimeLocal(response.data.end_datetime),
+        registration_deadline: toDatetimeLocal(response.data.registration_deadline) || '',
+        max_participants: response.data.max_participants || '',
+        organizing_department: response.data.organizing_department || '',
       });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load event');
@@ -73,23 +81,35 @@ export default function EventForm() {
     setSubmitting(true);
     setError(null);
 
+    // Frontend Validation
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const submitData = {
-        title: formData.title,
-        description: formData.description,
-        location: formData.location,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        capacity: formData.capacity || null,
-        department: formData.department || null,
-        registration_enabled: formData.registration_enabled,
-      };
+      // Convert to FormData for multipart submission
+      const submitData = new FormData();
+      submitData.append('title', formData.title);
+      submitData.append('description', formData.description);
+      submitData.append('venue', formData.venue);
+      submitData.append('start_datetime', formData.start_datetime);
+      submitData.append('end_datetime', formData.end_datetime);
+      submitData.append('registration_deadline', formData.registration_deadline); // Now required
+      if (formData.max_participants) submitData.append('max_participants', formData.max_participants);
+      if (formData.organizing_department) submitData.append('organizing_department', formData.organizing_department);
 
       if (id) {
-        await api.patch(`/events/events/${id}/`, submitData);
+        await api.patch(`/events/events/${id}/`, submitData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         toast.success('Event updated successfully');
       } else {
-        await api.post('/events/events/', submitData);
+        await api.post('/events/events/', submitData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         toast.success('Event created successfully');
       }
 
@@ -97,10 +117,37 @@ export default function EventForm() {
     } catch (err) {
       const errorMsg = err.response?.data?.detail || err.response?.data || 'Failed to save event';
       setError(JSON.stringify(errorMsg));
-      toast.error(errorMsg?.title?.[0] || errorMsg?.start_date?.[0] || errorMsg);
+      toast.error(errorMsg?.title?.[0] || errorMsg?.start_datetime?.[0] || errorMsg);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const validateForm = () => {
+    // Check required fields
+    if (!formData.title || !formData.description || !formData.venue || !formData.start_datetime || !formData.end_datetime || !formData.registration_deadline) {
+      return 'All required fields must be filled.';
+    }
+
+    // Check end time after start time
+    const startTime = new Date(formData.start_datetime);
+    const endTime = new Date(formData.end_datetime);
+    if (endTime <= startTime) {
+      return 'End date/time must be after start date/time.';
+    }
+
+    // Check registration deadline before event start
+    const regDeadline = new Date(formData.registration_deadline);
+    if (regDeadline >= startTime) {
+      return 'Registration deadline must be before event start date/time.';
+    }
+
+    // Check max participants is positive if provided
+    if (formData.max_participants && parseInt(formData.max_participants) <= 0) {
+      return 'Maximum participants must be greater than 0.';
+    }
+
+    return null;
   };
 
   if (loading) {
@@ -165,17 +212,18 @@ export default function EventForm() {
           />
         </div>
 
-        {/* Location */}
+        {/* Location/Venue */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Location
+            Venue *
           </label>
           <input
             type="text"
-            name="location"
-            value={formData.location}
+            name="venue"
+            value={formData.venue}
             onChange={handleInputChange}
-            placeholder="Enter event location"
+            required
+            placeholder="Enter event venue/location"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -186,8 +234,8 @@ export default function EventForm() {
             Department (Optional)
           </label>
           <select
-            name="department"
-            value={formData.department}
+            name="organizing_department"
+            value={formData.organizing_department}
             onChange={handleInputChange}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
@@ -208,8 +256,8 @@ export default function EventForm() {
             </label>
             <input
               type="datetime-local"
-              name="start_date"
-              value={formData.start_date}
+              name="start_datetime"
+              value={formData.start_datetime}
               onChange={handleInputChange}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -221,8 +269,8 @@ export default function EventForm() {
             </label>
             <input
               type="datetime-local"
-              name="end_date"
-              value={formData.end_date}
+              name="end_datetime"
+              value={formData.end_datetime}
               onChange={handleInputChange}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -230,35 +278,35 @@ export default function EventForm() {
           </div>
         </div>
 
-        {/* Capacity */}
+        {/* Registration Deadline */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Capacity (Optional)
+            Registration Deadline *
+          </label>
+          <input
+            type="datetime-local"
+            name="registration_deadline"
+            value={formData.registration_deadline}
+            onChange={handleInputChange}
+            required
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Max Participants */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Max Participants (Optional)
           </label>
           <input
             type="number"
-            name="capacity"
-            value={formData.capacity}
+            name="max_participants"
+            value={formData.max_participants}
             onChange={handleInputChange}
             min="0"
             placeholder="Maximum attendees (leave blank for unlimited)"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-        </div>
-
-        {/* Registration Enabled */}
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="registration_enabled"
-            name="registration_enabled"
-            checked={formData.registration_enabled}
-            onChange={handleInputChange}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-          />
-          <label htmlFor="registration_enabled" className="text-sm font-medium text-gray-700">
-            Allow Event Registration
-          </label>
         </div>
 
         {/* Buttons */}

@@ -44,36 +44,43 @@ class NoticeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         if user.role == User.Role.ADMIN:
-            # Admin sees all notices
-            return Notice.objects.select_related('created_by').prefetch_related('audiences')
+            # Admin sees all non-archived notices
+            queryset = Notice.objects.filter(is_archived=False).select_related('created_by').prefetch_related('audiences')
         
         elif user.role == User.Role.FACULTY:
-            # Faculty sees their own notices and all published ones targeted to them
-            return Notice.objects.filter(
+            # Faculty sees their own non-archived notices and all published non-archived ones
+            queryset = Notice.objects.filter(
                 Q(created_by=user) |
                 (
                     Q(is_published=True) &
-                    Q(is_archived=False) &
                     (
                         Q(expires_at__isnull=True) |
                         Q(expires_at__gt=timezone.now())
                     )
                 )
-            ).select_related('created_by').prefetch_related('audiences').distinct()
+            ).filter(is_archived=False).select_related('created_by').prefetch_related('audiences').distinct()
         
         elif user.role == User.Role.STUDENT:
-            # Students see only published notices targeted to them
+            # Students see only published non-archived notices targeted to them
             if not hasattr(user, 'student_profile'):
                 return Notice.objects.none()
             
-            return Notice.objects.filter(
+            queryset = Notice.objects.filter(
                 is_published=True,
                 is_archived=False
             ).filter(
                 Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
             ).select_related('created_by').prefetch_related('audiences').distinct()
         
-        return Notice.objects.none()
+        else:
+            return Notice.objects.none()
+        
+        # Apply category filter if provided
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category=category)
+        
+        return queryset
 
     def get_serializer_class(self):
         """Use appropriate serializer based on action."""
@@ -99,10 +106,10 @@ class NoticeViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
-        """Set created_by to current user."""
+        """Validate user role before creating."""
         if self.request.user.role not in [User.Role.ADMIN, User.Role.FACULTY]:
             raise PermissionError('Only admin and faculty can create notices.')
-        serializer.save(created_by=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
         """Only creator or admin can update."""

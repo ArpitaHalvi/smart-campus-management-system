@@ -13,7 +13,7 @@ export default function NoticeForm() {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    category: '',
+    category: 'GENERAL',
     audience_type: 'ALL',
     department: '',
     semester: '',
@@ -57,23 +57,85 @@ export default function NoticeForm() {
     setSubmitting(true);
     setError(null);
 
+    // Validate form
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      setSubmitting(false);
+      return;
+    }
+
     try {
+      // Build audience_data array
+      const audienceData = [];
+      
+      if (formData.audience_type === 'ALL') {
+        audienceData.push({ audience_type: 'ALL' });
+      } else if (formData.audience_type === 'DEPT' && formData.department) {
+        audienceData.push({ 
+          audience_type: 'DEPARTMENT',
+          department: formData.department 
+        });
+      } else if (formData.audience_type === 'SEMESTER' && formData.semester) {
+        audienceData.push({ 
+          audience_type: 'SEMESTER',
+          semester: formData.semester 
+        });
+      } else if (formData.audience_type === 'SECTION' && formData.section) {
+        audienceData.push({ 
+          audience_type: 'SECTION',
+          section: formData.section 
+        });
+      }
+
+      // Convert to FormData for multipart submission
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('content', formData.content);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('audience_data', JSON.stringify(audienceData));
+      if (formData.description) formDataToSend.append('description', formData.description);
+
       if (id) {
-        await api.patch(`/notices/notices/${id}/`, formData);
+        await api.patch(`/notices/notices/${id}/`, formDataToSend, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         toast.success('Notice updated successfully');
       } else {
-        await api.post('/notices/notices/', formData);
+        await api.post('/notices/notices/', formDataToSend, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         toast.success('Notice created successfully');
       }
 
       navigate('/faculty/notices');
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || 'Failed to save notice';
-      setError(errorMsg);
-      toast.error(errorMsg);
+      const errorMsg = err.response?.data?.detail || err.response?.data || 'Failed to save notice';
+      setError(typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : errorMsg);
+      toast.error(typeof errorMsg === 'string' ? errorMsg : 'Failed to save notice');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const validateForm = () => {
+    // Check required fields
+    if (!formData.title || !formData.content) {
+      return 'All required fields must be filled.';
+    }
+
+    // Check audience-specific fields
+    if (formData.audience_type === 'DEPT' && !formData.department) {
+      return 'Please select a department for this notice.';
+    }
+    if (formData.audience_type === 'SEMESTER' && !formData.semester) {
+      return 'Please select a semester for this notice.';
+    }
+    if (formData.audience_type === 'SECTION' && !formData.section) {
+      return 'Please select a section for this notice.';
+    }
+
+    return null;
   };
 
   if (loading) {
@@ -143,14 +205,19 @@ export default function NoticeForm() {
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Category
           </label>
-          <input
-            type="text"
+          <select
             name="category"
             value={formData.category}
             onChange={handleInputChange}
-            placeholder="e.g., Academic, Administrative, Event"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          >
+            <option value="GENERAL">General</option>
+            <option value="ACADEMIC">Academic</option>
+            <option value="EXAMINATION">Examination</option>
+            <option value="HOLIDAY">Holiday</option>
+            <option value="EVENTS">Events</option>
+            <option value="ADMINISTRATIVE">Administrative</option>
+          </select>
         </div>
 
         {/* Audience Type */}

@@ -180,6 +180,14 @@ class EventCreateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
 
+    def create(self, validated_data):
+        """Create event with organizer set from request context."""
+        event = Event.objects.create(
+            organizer=self.context['request'].user,
+            **validated_data
+        )
+        return event
+
     def validate_start_datetime(self, value):
         """Ensure start_datetime is in future."""
         if value <= timezone.now():

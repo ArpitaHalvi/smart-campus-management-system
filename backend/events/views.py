@@ -49,14 +49,14 @@ class EventViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         if user.role == User.Role.ADMIN:
-            # Admin sees all events
-            return Event.objects.select_related(
+            # Admin sees all non-cancelled events
+            queryset = Event.objects.exclude(status='CANCELLED').select_related(
                 'organizer', 'organizing_department'
             ).prefetch_related('registrations')
         
         elif user.role == User.Role.FACULTY:
-            # Faculty sees their own events and published events
-            return Event.objects.filter(
+            # Faculty sees their own non-cancelled events and published non-cancelled events
+            queryset = Event.objects.exclude(status='CANCELLED').filter(
                 Q(organizer=user) |
                 Q(is_published=True)
             ).select_related(
@@ -64,14 +64,26 @@ class EventViewSet(viewsets.ModelViewSet):
             ).prefetch_related('registrations').distinct()
         
         elif user.role == User.Role.STUDENT:
-            # Students see only published events
-            return Event.objects.filter(
+            # Students see only published non-cancelled events
+            queryset = Event.objects.exclude(status='CANCELLED').filter(
                 is_published=True
             ).select_related(
                 'organizer', 'organizing_department'
             ).prefetch_related('registrations')
         
-        return Event.objects.none()
+        else:
+            return Event.objects.none()
+        
+        # Apply search filter if provided (in addition to SearchFilter backend)
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(venue__icontains=search)
+            )
+        
+        return queryset
 
     def get_serializer_class(self):
         """Use appropriate serializer based on action."""
@@ -95,10 +107,10 @@ class EventViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
-        """Set organizer to current user."""
+        """Validate user role before creating."""
         if self.request.user.role not in [User.Role.ADMIN, User.Role.FACULTY]:
             raise PermissionError('Only admin and faculty can create events.')
-        serializer.save(organizer=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
         """Only organizer or admin can update."""
@@ -147,6 +159,15 @@ class EventViewSet(viewsets.ModelViewSet):
             status='UPCOMING'
         )
         
+        # Apply search filter if provided
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(venue__icontains=search)
+            )
+        
         serializer = EventListSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -157,6 +178,15 @@ class EventViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset().filter(
             end_datetime__lt=now
         )
+        
+        # Apply search filter if provided
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(venue__icontains=search)
+            )
         
         serializer = EventListSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

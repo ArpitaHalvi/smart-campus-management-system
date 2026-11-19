@@ -15,6 +15,7 @@ export default function EvaluationForm() {
   const [formData, setFormData] = useState({
     marks_obtained: 0,
     feedback: '',
+    feedback_visible: false,
   });
 
   useEffect(() => {
@@ -31,10 +32,11 @@ export default function EvaluationForm() {
       setSubmission(submissionRes.data);
       setAssignment(assignmentRes.data);
 
-      if (submissionRes.data.is_evaluated) {
+      if (submissionRes.data.status === 'evaluated') {
         setFormData({
-          marks_obtained: submissionRes.data.marks_obtained,
+          marks_obtained: submissionRes.data.marks_obtained || 0,
           feedback: submissionRes.data.feedback || '',
+          feedback_visible: submissionRes.data.feedback_visible || false,
         });
       }
     } catch (err) {
@@ -46,8 +48,11 @@ export default function EvaluationForm() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const handleDownload = async () => {
@@ -78,6 +83,7 @@ export default function EvaluationForm() {
       const formDataToSend = new FormData();
       formDataToSend.append('marks_obtained', formData.marks_obtained);
       formDataToSend.append('feedback', formData.feedback);
+      formDataToSend.append('feedback_visible', formData.feedback_visible);
 
       await api.post(`/assignments/submissions/${submissionId}/evaluate/`, formDataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -228,6 +234,21 @@ export default function EvaluationForm() {
               placeholder="Provide constructive feedback for the student"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+          </div>
+
+          {/* Feedback Visible Checkbox */}
+          <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <input
+              type="checkbox"
+              id="feedback_visible"
+              name="feedback_visible"
+              checked={formData.feedback_visible}
+              onChange={handleInputChange}
+              className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            />
+            <label htmlFor="feedback_visible" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Feedback Visible to Student
+            </label>
           </div>
 
           {/* Buttons */}

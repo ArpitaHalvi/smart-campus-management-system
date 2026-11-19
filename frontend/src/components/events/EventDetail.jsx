@@ -32,7 +32,7 @@ export default function EventDetail() {
   const checkRegistration = async () => {
     try {
       const response = await api.get('/events/registrations/my_registrations/');
-      const myRegistration = response.data.results?.find((r) => r.event_id === parseInt(id)) || response.data.find((r) => r.event_id === parseInt(id));
+      const myRegistration = response.data.results?.find((r) => r.event === parseInt(id)) || response.data.find((r) => r.event === parseInt(id));
       setIsRegistered(!!myRegistration);
     } catch (err) {
       console.error('Failed to check registration status');
@@ -88,10 +88,12 @@ export default function EventDetail() {
       setSubmitting(true);
       await api.delete(`/events/events/${id}/`);
       toast.success('Event deleted successfully');
-      navigate('/faculty/events');
+      // Add slight delay to ensure backend has time to process
+      setTimeout(() => {
+        navigate('/faculty/events');
+      }, 500);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to delete event');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -99,7 +101,7 @@ export default function EventDetail() {
   const handleRegister = async () => {
     try {
       setSubmitting(true);
-      await api.post('/events/registrations/', { event_id: id });
+      await api.post('/events/registrations/', { event: parseInt(id) });
       toast.success('Registered for event successfully');
       setIsRegistered(true);
       loadEvent();
@@ -114,7 +116,7 @@ export default function EventDetail() {
     try {
       setSubmitting(true);
       const response = await api.get('/events/registrations/my_registrations/');
-      const myRegistration = response.data.results?.find((r) => r.event_id === parseInt(id)) || response.data.find((r) => r.event_id === parseInt(id));
+      const myRegistration = response.data.results?.find((r) => r.event === parseInt(id)) || response.data.find((r) => r.event === parseInt(id));
       if (myRegistration) {
         await api.post(`/events/registrations/${myRegistration.id}/cancel/`);
         toast.success('Registration cancelled');
@@ -138,9 +140,24 @@ export default function EventDetail() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-        <AlertCircle className="text-red-600" size={20} />
-        <p className="text-red-700">{error}</p>
+      <div className="max-w-4xl space-y-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+        >
+          <ArrowLeft size={20} />
+          Go Back
+        </button>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-red-600 mt-1" size={24} />
+            <div>
+              <h2 className="text-lg font-semibold text-red-900 mb-2">Unable to Load Event</h2>
+              <p className="text-red-700 mb-3">{error}</p>
+              <p className="text-sm text-red-600">The event may have been deleted or you don't have permission to view it.</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -150,8 +167,23 @@ export default function EventDetail() {
   }
 
   const isFacultyOrAdmin = userRole === 'FACULTY' || userRole === 'ADMIN';
-  const isUpcoming = new Date(event.start_date) > new Date();
-  const isFull = event.capacity && event.registration_count >= event.capacity;
+  const isUpcoming = new Date(event.start_datetime) > new Date();
+  const isFull = event.max_participants && event.current_participants >= event.max_participants;
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Invalid Date';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'Invalid Date';
+    }
+  };
 
   return (
     <div className="max-w-4xl">
@@ -241,13 +273,7 @@ export default function EventDetail() {
               <div>
                 <p className="text-xs text-gray-600 font-semibold uppercase">Start Date</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {new Date(event.start_date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatDateTime(event.start_datetime)}
                 </p>
               </div>
             </div>
@@ -257,38 +283,30 @@ export default function EventDetail() {
               <div>
                 <p className="text-xs text-gray-600 font-semibold uppercase">End Date</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {new Date(event.end_date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatDateTime(event.end_datetime)}
                 </p>
               </div>
             </div>
 
-            {event.location && (
+            {event.venue && (
               <div className="flex items-start gap-3">
                 <MapPin className="text-blue-600 mt-1" size={20} />
                 <div>
-                  <p className="text-xs text-gray-600 font-semibold uppercase">Location</p>
-                  <p className="text-sm font-medium text-gray-900">{event.location}</p>
+                  <p className="text-xs text-gray-600 font-semibold uppercase">Venue</p>
+                  <p className="text-sm font-medium text-gray-900">{event.venue}</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Registration Info */}
-          {event.registration_enabled && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Users size={16} />
-              <span>
-                {event.registration_count} registered
-                {event.capacity && ` out of ${event.capacity}`}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Users size={16} />
+            <span>
+              {event.current_participants || 0} registered
+              {event.max_participants && ` out of ${event.max_participants}`}
+            </span>
+          </div>
         </div>
 
         {/* Faculty Actions */}
@@ -306,7 +324,7 @@ export default function EventDetail() {
         )}
 
         {/* Student Actions */}
-        {userRole === 'STUDENT' && event.is_published && event.registration_enabled && isUpcoming && (
+        {userRole === 'STUDENT' && event.is_published && event.is_registration_open && isUpcoming && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
             {isRegistered ? (
               <button

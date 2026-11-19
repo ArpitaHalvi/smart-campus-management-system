@@ -15,9 +15,30 @@ export default function EventsList() {
   const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    fetchEvents();
-    getUserRole();
+    const timer = setTimeout(() => {
+      if (search.length >= 3 || search.length === 0) {
+        fetchEvents();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [search, filter]);
+
+  useEffect(() => {
+    getUserRole();
+    fetchEvents();
+  }, []);
+
+  // Refetch events when component comes into focus (e.g., after returning from detail page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchEvents();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const getUserRole = async () => {
     try {
@@ -104,7 +125,7 @@ export default function EventsList() {
       <div className="flex gap-4 flex-wrap">
         <input
           type="text"
-          placeholder="Search events..."
+          placeholder="Search events... (minimum 3 characters)"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -132,7 +153,7 @@ export default function EventsList() {
       ) : (
         <div className="grid gap-4">
           {events.map((event) => {
-            const upcoming = isUpcoming(event.start_date);
+            const upcoming = isUpcoming(event.start_datetime);
 
             return (
               <Link
@@ -153,17 +174,17 @@ export default function EventsList() {
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
                         <Calendar size={16} />
-                        <span>{formatDate(event.start_date)}</span>
+                        <span>{formatDate(event.start_datetime)}</span>
                       </div>
-                      {event.location && (
+                      {event.venue && (
                         <div className="flex items-center gap-1">
                           <MapPin size={16} />
-                          <span>{event.location}</span>
+                          <span>{event.venue}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-1">
                         <Users size={16} />
-                        <span>{event.registration_count} registered</span>
+                        <span>{event.current_participants || 0} registered</span>
                       </div>
                     </div>
                   </div>

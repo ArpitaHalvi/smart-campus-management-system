@@ -12,11 +12,19 @@ export default function AssignmentDetail() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [studentSubmission, setStudentSubmission] = useState(null);
+  const [loadingSubmission, setLoadingSubmission] = useState(false);
 
   useEffect(() => {
     loadAssignment();
     getUserRole();
   }, [id]);
+
+  useEffect(() => {
+    if (userRole === 'STUDENT') {
+      loadStudentSubmission();
+    }
+  }, [userRole, id]);
 
   const getUserRole = async () => {
     try {
@@ -38,6 +46,21 @@ export default function AssignmentDetail() {
       toast.error('Failed to load assignment');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStudentSubmission = async () => {
+    try {
+      setLoadingSubmission(true);
+      const response = await api.get('/assignments/submissions/my_submissions/');
+      const mySubmission = response.data.results?.find((s) => s.assignment === parseInt(id)) || response.data.find((s) => s.assignment === parseInt(id));
+      if (mySubmission) {
+        setStudentSubmission(mySubmission);
+      }
+    } catch (err) {
+      console.error('Failed to load student submission');
+    } finally {
+      setLoadingSubmission(false);
     }
   };
 
@@ -99,6 +122,54 @@ export default function AssignmentDetail() {
       document.body.removeChild(a);
     } catch (err) {
       toast.error('Failed to download attachment');
+    }
+  };
+
+  const handleDownloadSubmission = async () => {
+    try {
+      const response = await api.get(`/assignments/submissions/${studentSubmission.id}/download_submission/`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `submission-${studentSubmission.id}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      toast.error('Failed to download submission');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-gray-100 text-gray-800';
+      case 'submitted':
+        return 'bg-blue-100 text-blue-800';
+      case 'late':
+        return 'bg-orange-100 text-orange-800';
+      case 'evaluated':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'Not Submitted';
+      case 'submitted':
+        return 'Submitted';
+      case 'late':
+        return 'Submitted Late';
+      case 'evaluated':
+        return 'Evaluated';
+      default:
+        return status;
     }
   };
 
@@ -298,15 +369,106 @@ export default function AssignmentDetail() {
 
         {/* Student Actions */}
         {userRole === 'STUDENT' && assignment.is_published && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <Link
-              to={`/student/assignments/${id}/submit`}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
-            >
-              <FileText size={18} />
-              Submit Assignment
-            </Link>
-          </div>
+          <>
+            {/* Submission Status Section - M3-19 */}
+            {studentSubmission && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+                <h2 className="text-lg font-semibold text-gray-900">Your Submission</h2>
+                
+                {/* Status Badge */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600 font-semibold uppercase mb-2">Submission Status</p>
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(studentSubmission.status)}`}>
+                      {getStatusLabel(studentSubmission.status)}
+                    </span>
+                  </div>
+                  {studentSubmission.is_late && (
+                    <span className="text-sm font-semibold text-orange-600">
+                      {studentSubmission.days_late} day{studentSubmission.days_late !== 1 ? 's' : ''} late
+                    </span>
+                  )}
+                </div>
+
+                {/* Submitted At */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-600 font-semibold uppercase">Submitted At</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {new Date(studentSubmission.submitted_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+
+                {/* View/Download Submission - M3-21 */}
+                <div>
+                  <p className="text-xs text-gray-600 font-semibold uppercase mb-2">Your Submission File</p>
+                  <button
+                    onClick={handleDownloadSubmission}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition"
+                  >
+                    <Download size={18} />
+                    Download Your Submission
+                  </button>
+                </div>
+
+                {/* Evaluation Results - M3-29 */}
+                {studentSubmission.status === 'evaluated' && (
+                  <div className="border-t border-gray-200 pt-4 space-y-3">
+                    <h3 className="font-semibold text-gray-900">Evaluation Results</h3>
+                    
+                    {/* Marks */}
+                    <div className="bg-green-50 rounded-lg p-3">
+                      <p className="text-xs text-green-600 font-semibold uppercase">Marks Obtained</p>
+                      <p className="text-2xl font-bold text-green-900">
+                        {studentSubmission.marks_obtained}/{assignment.max_marks}
+                      </p>
+                      <p className="text-xs text-green-700 mt-1">
+                        {studentSubmission.marks_obtained !== null && 
+                          `${((studentSubmission.marks_obtained / assignment.max_marks) * 100).toFixed(1)}%`
+                        }
+                      </p>
+                    </div>
+
+                    {/* Feedback */}
+                    {studentSubmission.feedback_visible && studentSubmission.feedback && (
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <p className="text-xs text-blue-600 font-semibold uppercase">Feedback</p>
+                        <p className="text-sm text-blue-900 mt-2 whitespace-pre-wrap">
+                          {studentSubmission.feedback}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {!studentSubmission.feedback_visible && (
+                      <div className="bg-yellow-50 rounded-lg p-3">
+                        <p className="text-sm text-yellow-700">
+                          Feedback is not visible yet. Your instructor will share it soon.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Submit Button - if no submission or allow resubmit */}
+            {(!studentSubmission || assignment.allow_resubmission) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <Link
+                  to={`/student/assignments/${id}/submit`}
+                  className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+                >
+                  <FileText size={18} />
+                  {studentSubmission ? 'Resubmit Assignment' : 'Submit Assignment'}
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -14,8 +14,30 @@ export default function AssignmentsList() {
   const [filtering, setFiltering] = useState(false);
 
   useEffect(() => {
-    fetchAssignments();
+    const timer = setTimeout(() => {
+      if (search.length >= 3 || search.length === 0) {
+        fetchAssignments();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    // Initial load
+    fetchAssignments();
+  }, []);
+
+  // Refetch assignments when component comes into focus (e.g., after returning from detail page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchAssignments();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const fetchAssignments = async () => {
     try {
@@ -92,7 +114,7 @@ export default function AssignmentsList() {
       <div className="relative">
         <input
           type="text"
-          placeholder="Search assignments by title or description..."
+          placeholder="Search assignments... (minimum 3 characters)"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

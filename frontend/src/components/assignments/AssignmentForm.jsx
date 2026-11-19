@@ -23,6 +23,7 @@ export default function AssignmentForm() {
     semester: '',
     section: '',
     file_url: null,
+    allow_resubmission: false,
   });
 
   useEffect(() => {
@@ -49,16 +50,25 @@ export default function AssignmentForm() {
     try {
       setLoading(true);
       const response = await api.get(`/assignments/assignments/${id}/`);
+      
+      // Convert ISO datetime strings to datetime-local format (YYYY-MM-DDTHH:mm)
+      const toDatetimeLocal = (isoString) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toISOString().slice(0, 16);
+      };
+      
       setFormData({
         title: response.data.title,
         description: response.data.description,
         instructions: response.data.instructions || '',
         subject_name: response.data.subject_name,
         max_marks: response.data.max_marks,
-        deadline: response.data.deadline,
+        deadline: toDatetimeLocal(response.data.deadline),
         semester: response.data.semester,
         section: response.data.section,
         file_url: response.data.file_url,
+        allow_resubmission: response.data.allow_resubmission || false,
       });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load assignment');
@@ -69,8 +79,11 @@ export default function AssignmentForm() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -95,8 +108,9 @@ export default function AssignmentForm() {
     setError(null);
 
     // Validate required fields
-    if (!formData.semester || !formData.section) {
-      setError('Please select both semester and section');
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       setSubmitting(false);
       return;
     }
@@ -111,6 +125,7 @@ export default function AssignmentForm() {
       formDataObj.append('deadline', formData.deadline);
       formDataObj.append('semester', formData.semester);
       formDataObj.append('section', formData.section);
+      formDataObj.append('allow_resubmission', formData.allow_resubmission);
 
       if (file) {
         formDataObj.append('attachment', file);
@@ -136,6 +151,20 @@ export default function AssignmentForm() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const validateForm = () => {
+    // Check required fields
+    if (!formData.title || !formData.description || !formData.subject_name || !formData.max_marks || !formData.deadline || !formData.semester || !formData.section) {
+      return 'All required fields must be filled.';
+    }
+
+    // Check max marks is positive
+    if (parseInt(formData.max_marks) <= 0) {
+      return 'Maximum marks must be greater than 0.';
+    }
+
+    return null;
   };
 
   if (loading) {
@@ -271,6 +300,21 @@ export default function AssignmentForm() {
             placeholder="Provide submission guidelines and instructions"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+
+        {/* Allow Resubmission */}
+        <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <input
+            type="checkbox"
+            id="allow_resubmission"
+            name="allow_resubmission"
+            checked={formData.allow_resubmission}
+            onChange={handleInputChange}
+            className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          />
+          <label htmlFor="allow_resubmission" className="text-sm font-medium text-gray-700 cursor-pointer">
+            Allow students to resubmit assignments
+          </label>
         </div>
 
         {/* Max Marks */}

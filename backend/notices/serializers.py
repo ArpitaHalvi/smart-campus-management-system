@@ -99,8 +99,8 @@ class NoticeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notice
         fields = [
-            'id', 'title', 'category', 'category_display', 'is_pinned',
-            'published_at', 'expires_at', 'created_by_name', 'is_active'
+            'id', 'title', 'content', 'category', 'category_display', 'is_pinned',
+            'is_published', 'published_at', 'expires_at', 'created_by_name', 'is_active', 'created_at'
         ]
         read_only_fields = fields
 
@@ -126,33 +126,52 @@ class NoticeCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create notice with audiences."""
+        import json
         audience_data = validated_data.pop('audience_data', [])
         
+        # Parse audience_data if it's a JSON string
+        if isinstance(audience_data, str):
+            try:
+                audience_data = json.loads(audience_data)
+            except json.JSONDecodeError:
+                audience_data = []
+        
         notice = Notice.objects.create(
-            **validated_data,
-            created_by=self.context['request'].user
+            created_by=self.context['request'].user,
+            **validated_data
         )
         
         # Create audience entries
         for audience_item in audience_data:
-            audience_type = audience_item.get('audience_type')
-            
-            audience_obj = NoticeAudience.objects.create(
-                notice=notice,
-                audience_type=audience_type,
-                department_id=audience_item.get('department'),
-                semester_id=audience_item.get('semester'),
-                section_id=audience_item.get('section'),
-                user_id=audience_item.get('user')
-            )
+            if isinstance(audience_item, dict):
+                audience_type = audience_item.get('audience_type')
+                
+                audience_obj = NoticeAudience.objects.create(
+                    notice=notice,
+                    audience_type=audience_type,
+                    department_id=audience_item.get('department'),
+                    semester_id=audience_item.get('semester'),
+                    section_id=audience_item.get('section'),
+                    user_id=audience_item.get('user')
+                )
         
         return notice
 
     def validate(self, attrs):
         """Validate audience data."""
+        import json
         audience_data = attrs.get('audience_data', [])
         
-        if not audience_data:
+        # Parse audience_data if it's a JSON string
+        if isinstance(audience_data, str):
+            try:
+                audience_data = json.loads(audience_data)
+            except json.JSONDecodeError:
+                raise serializers.ValidationError({
+                    'audience_data': 'Invalid JSON format for audience_data.'
+                })
+        
+        if not audience_data or (isinstance(audience_data, list) and len(audience_data) == 0):
             raise serializers.ValidationError({
                 'audience_data': 'At least one audience must be specified.'
             })

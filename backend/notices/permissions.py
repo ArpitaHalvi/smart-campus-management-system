@@ -61,8 +61,8 @@ class CanViewNotice(BasePermission):
         if request.user.role == User.Role.ADMIN or obj.created_by == request.user:
             return True
         
-        # Check audience targeting
-        return any(
-            audience.can_view(request.user)
-            for audience in obj.audiences.all()
-        )
+        # Published notices are visible to all authenticated users by default
+        if obj.is_published:
+            return True
+        
+        return False

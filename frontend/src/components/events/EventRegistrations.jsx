@@ -18,7 +18,7 @@ export default function EventRegistrations() {
   const fetchRegistrations = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/assignments/events/${id}/registrations/`);
+      const response = await api.get(`/events/events/${id}/registrations/`);
       setRegistrations(response.data.results || response.data);
       setError(null);
     } catch (err) {
